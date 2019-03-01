@@ -74,8 +74,8 @@ def add_span():
         cli.cli('configure terminal ; spanning-tree mode mst')
         logger.info('spanning-tree mode mst' +
                     ' command executed successfully')
-        cli.cli('configure terminal ; vlan configuration 1-3967')
-        logger.info('vlan configuration 1-3967' +
+        cli.cli('configure terminal ; vlan 1-3967')
+        logger.info('vlan 1-3967' +
                     ' command configured successfully')
         cli.cli(
             'configure terminal ; no spanning-tree vlan 1-3967')
