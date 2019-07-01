@@ -567,6 +567,7 @@ def guestshell():
     validate_resp = validate_gs_version(gs_version)
     if not validate_resp:
         logger.error("NDB doesn't support current Guestshell version")
+        logger.error("NDB will run on Guestshell version 2.2 and above, either upgrade the Guestshell or destroy and re-run the script")
         sys.exit(0)
     if not force_flag:
         allocate_resp, ndb_obj = allocate_gs_resource(ndb_obj)
