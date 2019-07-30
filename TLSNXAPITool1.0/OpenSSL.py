@@ -270,8 +270,8 @@ class Device:
         str(self.locality_name))
         replace_method("./Utilities/TlsCerts/ca.conf", \
         self.organizationalunit_name_c, str(self.organization_name))
-        replace_method("./Utilities/TlsCerts/ca.conf", self.commonname_c, \
-        str(self.common_name))
+        #replace_method("./Utilities/TlsCerts/ca.conf", self.commonname_c, \
+        #str(self.common_name))
         replace_method("./Utilities/TlsCerts/ca.conf", self.default_md_c, \
         str(self.default_md))
         replace_method("./Utilities/TlsCerts/ca.conf", self.default_bits_c, \
@@ -287,6 +287,9 @@ class Device:
             replace_method("./Utilities/TlsCerts/ca.conf", \
                 self.ip_l[self.replace_ip],\
                 str(self.device_ip_list[self.replace_ip]))
+            replace_method("./Utilities/TlsCerts/ca.conf", \
+                self.commonname_c,\
+                str(self.device_ip_list[self.replace_ip]))
             self.replace_ip += 1
         self.default_days_str = str(self.default_days)
         self.default_bits_str = str(self.default_bits)
@@ -297,6 +300,7 @@ class Device:
                 self.keystore_password = str(confi['keystore'])
         except OSError:
             LOGGER.error("Failed to open input yaml file")
+        '''
         self.gen_key_ca = str("openssl req -x509 -nodes -days "+\
                               self.default_days_str+"0 -newkey rsa:"+
                               self.default_bits_str+" -out "+\
@@ -318,8 +322,9 @@ class Device:
         except OSError:
             LOGGER.error("Failed to Generate ca.pem and ca.key files -step4")
             sys.exit(0)
+        '''
         self.gen_cert_key = str("openssl req -new -x509 -days "+\
-                            self.default_days_str+" -nodes -out "+\
+                            self.default_days_str + "0 -newkey rsa:"+ self.default_bits_str+" -nodes -out "+\
                             "./Utilities/TlsCerts/server.crt -keyout "+\
                             "./Utilities/TlsCerts/server.key -config "+\
                             "./Utilities/TlsCerts/ca.conf -batch")
@@ -839,6 +844,7 @@ class Device:
             LOGGER.error("Failed to Convert the xnc.p12 to a Java "+\
                     "KeyStore (tlsKeyStore) file -step31")
             #sys.exit(0)
+        '''
         self.capem_sw = "cp ./Utilities/TlsCerts/mypersonalca/certs/ca.pem "+\
         "./Utilities/TlsCerts/sw-cacert.pem"
         try:
@@ -853,8 +859,9 @@ class Device:
             LOGGER.error("Failed to Copy xnc-privatekey.pem and "+\
                     "xnc-cert.pem file to xnc.pem file")
             sys.exit(0)
+        '''
         self.sw_tlstrust = "keytool -import -alias swca1 -file "+\
-        "./Utilities/TlsCerts/sw-cacert.pem -keystore ./Utilities/TlsCerts/tlsTrustStore "+\
+        "./Utilities/TlsCerts/xnc-cert.pem -keystore ./Utilities/TlsCerts/tlsTrustStore "+\
         "-storepass "+self.keystore_password+" -noprompt"
         try:
             self.sw_tlstrust_res = call(str(self.sw_tlstrust), \
@@ -929,7 +936,8 @@ class Device:
                     LOGGER.error("Error while ssh into the server")
                     exit(0)
             time.sleep(5)
-            #pdb.set_trace()
+            self.stop_ndb = 'cd '+xnc_path+' ;./runxnc.sh -stop'
+            self.stop_n = str(self.stop_ndb)
             self.run_ndb = 'cd '+xnc_path+' ;./runxnc.sh -osgiPasswordSync '+\
             '-tls -tlskeystore ./configuration/tlsKeyStore -tlstruststore '+\
             './configuration/tlsTrustStore'
@@ -938,6 +946,8 @@ class Device:
                 self.run_n += '\n'
                 try:
                     chan = ssh.invoke_shell()
+                    chan.send(self.stop_n)
+                    time.sleep(5)
                     chan.send(self.run_n)
                 except OSError:
                     LOGGER.error("Server "+self.tem_serip+" Failed Run NDB"+\
@@ -945,6 +955,8 @@ class Device:
                     sys.exit(0)
             else:
                 try:
+                    stdin, stdout, stderr = ssh.exec_command(self.stop_n)
+                    time.sleep(5)
                     stdin, stdout, stderr = ssh.exec_command(self.run_n)
                     stdin.write(self.xnc_pwd+"\n")
                     #print stdout.readlines()
@@ -1011,7 +1023,6 @@ class Device:
                     LOGGER.error("Failed to start NDB in TLS mode")
                     sys.exit(0)
             time.sleep(15)
-            #pdb.set_trace()
             self.prov_pass = 'cd '+xnc_path+'bin/ ;./xnc '+\
                 'config-keystore-passwords --user '+self.xnc_usr+\
                 ' --password '+self.xnc_pwd+' --url https://'+self.tem_serip+\
