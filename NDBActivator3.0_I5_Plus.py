@@ -77,7 +77,7 @@ class Nexus(object):
 
     def get_role(self, user=None):
         """Returns the role of a given user"""
-        user_role = None
+        user_roles = None
         if user:
             self.user = user
         if self.user:
@@ -85,13 +85,13 @@ class Nexus(object):
             try:
                 roles_resp = cli(roles_cmd)
                 roles = json.loads(roles_resp)
-                user_role = roles['TABLE_template']['ROW_template'][
-                    'TABLE_role']['ROW_role']['role']
+                user_roles = roles['TABLE_template']['ROW_template'][
+                    'TABLE_role']['ROW_role']
             except:
                 logger.error("Somethisg went wrong while fetching user roles")
         else:
             logger.error("Please specify valid user")
-        return user_role
+        return user_roles
 
     def get_privilege(self):
         """Returns the privilege of a given user"""
@@ -538,6 +538,12 @@ def guestshell():
         sys.exit(0)
     # Check the current user role
     c_user_role = ndb_obj.get_role()
+    if type(c_user_role)==list:
+        for roles in c_user_role:
+            if "network-admin" in roles["role"]:
+                c_user_role = "network-admin"
+    else:
+        c_user_role = c_user_role["role"]
     if 'network-admin' not in c_user_role:
         logger.error("User role is not network-admin")
         sys.exit(0)
@@ -567,7 +573,6 @@ def guestshell():
     validate_resp = validate_gs_version(gs_version)
     if not validate_resp:
         logger.error("NDB doesn't support current Guestshell version")
-        logger.error("NDB will run on Guestshell version 2.2 and above, either upgrade the Guestshell or destroy and re-run the script")
         sys.exit(0)
     if not force_flag:
         allocate_resp, ndb_obj = allocate_gs_resource(ndb_obj)
