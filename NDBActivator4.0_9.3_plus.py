@@ -1,4 +1,8 @@
-"""Start NDB Embedded using Guestshell"""
+"""Validated NDB Release(s): NDB 3.10.0
+Script is to deploy NDB Embedded on the Guestshell for the first time
+usage: python bootflash:<Activator_script> -v guestshell+ <NDB_embedded_zip_file>
+            [<jre_tar.gz_file> <unzip_rpm_file>] [--force] [--quiet]"""
+
 import json
 import subprocess
 import re
@@ -356,15 +360,13 @@ class Guestshell(Nexus):
             return False
 
 class NDB(Guestshell):
-    """Performs NDB related opertaions inside Guestshell"""
+    """Performs NDB related operations inside Guestshell"""
     def __init__(self):
         super(NDB, self).__init__()
         self.ndb_version = None
 
     def extract_ndb(self, file_name, path_to_extract):
         """Extract the NDB zip file to given path"""
-                                         
-                                                                   
         try:
             zip_ref = zipfile.ZipFile(file_name, 'r')
             zip_ref.extractall(path_to_extract)
@@ -387,6 +389,51 @@ class NDB(Guestshell):
                 dir_path = ndbpath + '/' + dir_name
                 if not os.path.isdir(dir_path):
                     return False
+            return True
+        except:
+            return False
+
+    def install_jre(self, install_flag, jre_file):
+        """Setting up JRE for NDB"""
+        if install_flag and "tar.gz" in jre_file:
+            logger.info("Extracting JAVA - offline mode")
+            install_jre_cmd0 = 'guestshell run sudo mkdir -p /usr/bin/jre'
+            cli(install_jre_cmd0)
+            install_jre_cmd1 = 'guestshell run sudo tar -xvzf '+ jre_file + ' --directory /usr/bin/jre/ --no-same-owner'
+            cli(install_jre_cmd1)
+            install_jre_cmd2 = 'guestshell run sudo ls /usr/bin/jre/'
+            val = cli(install_jre_cmd2)
+            install_jre_cmd = 'guestshell run sudo ln -s /usr/bin/jre/'+val.strip()+'/bin/java /usr/bin/java'
+        else:
+            logger.info("Installing JAVA - online mode")
+            install_jre_cmd = 'guestshell run sudo ip netns exec management yum -y install java-1.8.0-openjdk'
+        try:
+            v=cli(install_jre_cmd)
+            if "fail" in v:
+                if 'Complete!' not in v:
+                    if 'Could not resolve host' in v:
+                        logger.error("Could not reach repository for installing Java, refer ndb_deploy.log in bootflash for more details")
+                    else:
+                        logger.error("Something went wrong while installing Java, refer ndb_deploy.log in bootflash for more details")
+                    logger.debug(v)
+                    return False
+            return True
+        except:
+            return False
+
+    def install_unzip(self, install_flag, unzip_file):
+        """Installing unzip package"""
+        if install_flag:
+            logger.info("Installing unzip package - offline mode")
+            install_unzip_cmd = 'guestshell run sudo rpm -ivh ' + unzip_file
+        else:
+            logger.info("Installing unzip package - online mode")
+            install_unzip_cmd = 'guestshell run sudo ip netns exec management yum -y install unzip'
+        try:
+            v=cli(install_unzip_cmd)
+            if "fail" in v:
+                logger.debug(v)
+                return False
             return True
         except:
             return False
@@ -417,7 +464,6 @@ def validate_gs_version(version):
     return bool((float(major_version) > min_major_version) or
                 (float(major_version) == min_major_version and
                  float(minor_version) >= min_minor_version))
-
 
 def wait_gs_up(gs_obj):
     """Waits for the guestshell to be UP"""
@@ -520,6 +566,13 @@ def guestshell():
     """Perform all guestshell operation to start NDB"""
     ndb_obj = NDB()
     force_flag = 0
+    install_flag=0
+    jre_file = "online"
+    unzip_file = "online"
+    if '--help' in sys.argv:
+        logger.info(
+            "usage: python bootflash:<Activator_script> -v guestshell+ <NDB_embedded_zip_file> "
+            "[<jre_tar.gz_file> <unzip_rpm_file>] [--force] [--quiet]")
     if len(sys.argv) == 4:
         zip_file_path = sys.argv[-1]
     elif len(sys.argv) == 5 and '--force' in sys.argv[-1]:
@@ -527,10 +580,33 @@ def guestshell():
         force_flag = 1
     elif len(sys.argv) == 5 and '--quiet' in sys.argv[-1]:
         zip_file_path = sys.argv[-2]
-    elif len(sys.argv) == 6:
+    elif len(sys.argv) == 6 and '--force' not in sys.argv[-1] and '--quiet' not in sys.argv[-1]:
         zip_file_path = sys.argv[-3]
+        jre_file = sys.argv[-2]
+        install_flag = 1
+        unzip_file = sys.argv[-1]
+    elif len(sys.argv) == 7 and '--force' in sys.argv[-1]:
+        zip_file_path = sys.argv[-4]
+        jre_file = sys.argv[-3]
+        install_flag = 1
+        unzip_file = sys.argv[-2]
+        force_flag = 1
+    elif len(sys.argv) == 7 and '--quiet' in sys.argv[-1]:
+        zip_file_path = sys.argv[-4]
+        jre_file = sys.argv[-3]
+        install_flag = 1
+        unzip_file = sys.argv[-2]
     else:
-        logger.error("Please provide valid arguments")
+        logger.error("Provided arguments are not valid")
+        logger.info(
+            "usage: python bootflash:<Activator_script> -v guestshell+ <NDB_embedded_zip_file> "
+            "[<jre_tar.gz_file> <unzip_rpm_file>] [--force] [--quiet]")
+        sys.exit(0)
+    if install_flag == 1 and "tar.gz" not in jre_file:
+        logger.error("Provided jre tar.gz file is not valid.")
+        sys.exit(0)
+    if install_flag == 1 and "rpm" not in unzip_file:
+        logger.error("Provided unzip rpm package file is not valid")
         sys.exit(0)
     c_user = ndb_obj.get_user()
     if not c_user:
@@ -586,7 +662,21 @@ def guestshell():
     if check_file_resp:
         logger.error("Directory ndb already present in bootflash. Please remove it.")
         sys.exit(0)
-    # Unziping NDB zip file to Guestshell /opt directory
+
+    # JRE installation
+    jre_resp = ndb_obj.install_jre(install_flag, jre_file)
+    if not jre_resp and not install_flag:
+        logger.info("To install Java, either provide internet connectivity or run activator script with JRE tar.gz file as argument")
+        sys.exit(0)
+    # unzip package installation
+    unzip_resp = ndb_obj.install_unzip(install_flag, unzip_file)
+    if not unzip_resp:
+        logger.error("Something went wrong while installing unzip package, refer ndb_deploy.log in bootflash for more details")
+        if not install_flag:
+            logger.error("To install unzip package, either provide internet connectivity or run activator script with unzip rpm package as argument")
+        sys.exit(0)
+
+    # Unzipping NDB zip file to Guestshell bootflash
     extract_resp = ndb_obj.extract_ndb(zip_file_path, '/bootflash')
     ndb_path = '/bootflash/ndb'
     guest_path = '/usr/bin'
@@ -600,7 +690,7 @@ def guestshell():
     if extract_resp:
         # Validate the content in ndb dir
         if not os.path.exists(ndb_path):
-            logger.error("Zip file doesn't contain ndb. Provide valid zip file")
+            logger.error("Zip file "+ zip_file_path +" doesn't contain ndb. Provide valid zip file")
             ndb_obj.remove_file('ndb')
             sys.exit(0)
         validate_resp = ndb_obj.validate_ndb_content(ndb_path)
@@ -610,9 +700,10 @@ def guestshell():
             sys.exit(0)
     else:
         # add the actual value instead of generic zip file
-        logger.error("Something went wrong while extracting zip file")
+        logger.error("Something went wrong while extracting zip file "+ zip_file_path)
         ndb_obj.remove_file('ndb')
         sys.exit(0)
+
     embedded_path = ndb_path + '/embedded/i5'
     modify_resp = ndb_obj.modify_content(c_user, embedded_path)
     if not modify_resp:
@@ -640,7 +731,7 @@ def guestshell():
         logger.error("Something went wrong while changing the permission of ndb directory")
     nxapi_resp = ndb_obj.enable_nxapi_feature()
     if not nxapi_resp:
-        logger.error("Something went wrong while enable feature nxapi in switch")
+        logger.error("Something went wrong while enabling feature nxapi in switch")
     vrf_resp = ndb_obj.set_nxapi_vrf()
     if vrf_resp:
         logger.info("Kept the nxapi to listen to network namespace")
@@ -648,7 +739,9 @@ def guestshell():
         logger.error("Something went wrong while keeping nxapi to listen to network namespace")
         sys.exit(0)
     start_resp = ndb_obj.start_ndb(ndb_path)
-    if not start_resp:
+    if start_resp:
+        logger.info("Started NDB")
+    else:
         logger.error("Something went wrong while starting NDB as a service")
         sys.exit(0)
 
@@ -662,7 +755,7 @@ if __name__ == "__main__":
     con_log_handler = logging.StreamHandler()
     file_log_handler = logging.FileHandler("/bootflash/ndb_deploy.log")
     file_log_handler.setLevel(logging.DEBUG)
-    con_log_handler.setLevel(logging.DEBUG)
+    con_log_handler.setLevel(logging.INFO)
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     file_log_handler.setFormatter(formatter)
