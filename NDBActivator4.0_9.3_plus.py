@@ -665,8 +665,9 @@ def guestshell():
 
     # JRE installation
     jre_resp = ndb_obj.install_jre(install_flag, jre_file)
-    if not jre_resp and not install_flag:
-        logger.info("To install Java, either provide internet connectivity or run activator script with JRE tar.gz file as argument")
+    if not jre_resp:
+        if not install_flag:
+            logger.info("To install Java, either provide internet connectivity or run activator script with JRE tar.gz file as argument")
         sys.exit(0)
     # unzip package installation
     unzip_resp = ndb_obj.install_unzip(install_flag, unzip_file)
