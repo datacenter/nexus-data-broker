@@ -455,15 +455,25 @@ class NDB(Guestshell):
 def validate_gs_version(version):
     """Returns True if guestshell version is equal to or greater than 2.2(0.2)"""
     guestshell_version = version
-    version_pattern = r"\d.\d"
+    version_pattern = r"(\d+).(\d+)"
     versions = re.findall(version_pattern, guestshell_version)
-    major_version = versions[0]
-    minor_version = versions[1]
-    min_major_version = 2.2
-    min_minor_version = 0.2
-    return bool((float(major_version) > min_major_version) or
-                (float(major_version) == min_major_version and
-                 float(minor_version) >= min_minor_version))
+    version1 = list(versions[0])
+    major_version1 = version1[0]
+    minor_version1 = version1[1]
+    expected_major_version1 = 2
+    expected_minor_version1 = 2
+    val = str(major_version1) + "." + str(minor_version1)
+    if val == "2.2":
+        version2 = list(versions[1])
+        major_version2 = version2[0]
+        minor_version2 = version2[1]
+        expected_major_version2 = 0
+        expected_minor_version2 = 2
+        if bool(int(major_version2) >= int(expected_major_version2) and (int(minor_version2)) >= int(
+                expected_minor_version2)) is False:
+            return False
+    return(bool(int(major_version1) >= int(expected_major_version1) and (int(minor_version1)) >= int(
+        expected_minor_version1)))
 
 def wait_gs_up(gs_obj):
     """Waits for the guestshell to be UP"""
