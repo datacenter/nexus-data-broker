@@ -88,7 +88,7 @@ class Nexus(object):
                 user_roles = roles['TABLE_template']['ROW_template'][
                     'TABLE_role']['ROW_role']
             except:
-                logger.error("Somethisg went wrong while fetching user roles")
+                logger.error("Something went wrong while fetching user roles")
         else:
             logger.error("Please specify valid user")
         return user_roles
@@ -355,16 +355,24 @@ class Guestshell(Nexus):
         except:
             return False
 
+    def guestshell_user(self):
+        """proc to get the guestshell user"""
+        gs_user_cmd = 'guestshell run whoami'
+        # logger.info(gs_user_cmd)
+        try:
+            gs_user = cli(gs_user_cmd)
+            return gs_user
+        except:
+            return "Something went wrong while getting the guestshell username"
+
 class NDB(Guestshell):
-    """Performs NDB related opertaions inside Guestshell"""
+    """Performs NDB related operations inside Guestshell"""
     def __init__(self):
         super(NDB, self).__init__()
         self.ndb_version = None
 
     def extract_ndb(self, file_name, path_to_extract):
         """Extract the NDB zip file to given path"""
-                                         
-                                                                   
         try:
             zip_ref = zipfile.ZipFile(file_name, 'r')
             zip_ref.extractall(path_to_extract)
@@ -374,7 +382,7 @@ class NDB(Guestshell):
             return False
 
     def validate_ndb_content(self, path):
-        """Check for the files inside xnc dirctory"""
+        """Check for the files inside xnc directory"""
         try:
             xncpath = path
             files = ('runxnc.sh', 'start.sh', 'version.properties', 'runxnc.cmd')
@@ -406,18 +414,27 @@ class NDB(Guestshell):
         return bool(os.path.exists(systemd_path))
 
 def validate_gs_version(version):
-    """Returns True if guestshell verison is equalto or greater than 2.2(0.2)"""
+    """Returns True if guestshell version is equal to or greater than 2.2(0.2)"""
     guestshell_version = version
-    version_pattern = r"\d.\d"
+    version_pattern = r"(\d+).(\d+)"
     versions = re.findall(version_pattern, guestshell_version)
-    major_version = versions[0]
-    minor_version = versions[1]
-    min_major_version = 2.2
-    min_minor_version = 0.2
-    return bool((float(major_version) > min_major_version) or
-                (float(major_version) == min_major_version and
-                 float(minor_version) >= min_minor_version))
-
+    version1 = list(versions[0])
+    major_version1 = version1[0]
+    minor_version1 = version1[1]
+    expected_major_version1 = 2
+    expected_minor_version1 = 2
+    val = str(major_version1) + "." + str(minor_version1)
+    if val == "2.2":
+        version2 = list(versions[1])
+        major_version2 = version2[0]
+        minor_version2 = version2[1]
+        expected_major_version2 = 0
+        expected_minor_version2 = 2
+        if bool(int(major_version2) >= int(expected_major_version2) and (int(minor_version2)) >= int(
+                expected_minor_version2)) is False:
+            return False
+    return(bool(int(major_version1) >= int(expected_major_version1) and (int(minor_version1)) >= int(
+        expected_minor_version1)))
 
 def wait_gs_up(gs_obj):
     """Waits for the guestshell to be UP"""
@@ -434,7 +451,7 @@ def wait_gs_up(gs_obj):
     return bool(activated_flag)
 
 def allocate_gs_resource(gs_obj):
-    """Allocate guestshell resource based on vailable quota"""
+    """Allocate guestshell resource based on available quota"""
     min_memory = 1024
     min_disk = 1024
     min_cpu = 5
@@ -534,7 +551,7 @@ def guestshell():
         sys.exit(0)
     c_user = ndb_obj.get_user()
     if not c_user:
-        logger.error("Somthing went wrong while fetching current user")
+        logger.error("Something went wrong while fetching current user")
         sys.exit(0)
     # Check the current user role
     c_user_role = ndb_obj.get_role()
@@ -549,7 +566,7 @@ def guestshell():
         sys.exit(0)
     privilege = ndb_obj.get_privilege()
     if int(privilege) != 15:
-        logger.error("User privelege is not 15")
+        logger.error("User privilege is not 15")
         sys.exit(0)
     # Check whether the guestshell is activated
     current_gs_status = ndb_obj.get_status()
@@ -559,12 +576,12 @@ def guestshell():
         # Enabling Guestshell in the switch
         logger.info("Enabling Guestshell")
         enable_resp = ndb_obj.enable()
-        state_falg = 0
+        state_flag = 0
         if enable_resp:
             wait_resp = wait_gs_up(ndb_obj)
             if wait_resp:
-                state_falg = 1
-        if not state_falg:
+                state_flag = 1
+        if not state_flag:
             logger.error("Something went wrong while enabling Guestshell")
             sys.exit(0)
     # Validate the current GS version
@@ -573,6 +590,7 @@ def guestshell():
     validate_resp = validate_gs_version(gs_version)
     if not validate_resp:
         logger.error("NDB doesn't support current Guestshell version")
+        logger.error("NDB will run on Guestshell version 2.2 and above, either upgrade the Guestshell or destroy and re-run the script")
         sys.exit(0)
     if not force_flag:
         allocate_resp, ndb_obj = allocate_gs_resource(ndb_obj)
@@ -585,10 +603,12 @@ def guestshell():
     if check_file_resp:
         logger.error("Directory xnc already present in bootflash. Please remove it.")
         sys.exit(0)
-    # Unziping NDB zip file to Guestshell /opt directory
+
+    # Unzipping NDB zip file to Guestshell bootflash
     extract_resp = ndb_obj.extract_ndb(zip_file_path, '/bootflash')
     xnc_path = '/bootflash/xnc'
-    guest_path = '/home/' + c_user
+    gs_user = ndb_obj.guestshell_user().splitlines()[0]
+    guest_path = '/home/' + gs_user
     # Verifying NDB is already installed
     if not force_flag:
         verify_ndb_resp = ndb_obj.verify_ndb()
@@ -628,18 +648,19 @@ def guestshell():
         ndb_obj.remove_file('xnc')
         sys.exit(0)
     else:
-        logger.info("Placed the xnc folder into the guestshell home directory")
+        logger.info("Placed the xnc folder into home directory "+guest_path)
         # Remove xnc directory from bootflash
         remove_resp = ndb_obj.remove_file('xnc')
         if not remove_resp:
             logger.error("Something went wrong while removing xnc from bootflash")
-    ndb_path = '/home/' + c_user + '/xnc'
+
+    ndb_path = '/home/' + gs_user + '/xnc'
     ndb_perm_resp = ndb_obj.change_ndb_perm(ndb_path)
     if not ndb_perm_resp:
         logger.error("Something went wrong while changing the permission of xnc directory")
     nxapi_resp = ndb_obj.enable_nxapi_feature()
     if not nxapi_resp:
-        logger.error("Something went wrong while enable feature nxapi in switch")
+        logger.error("Something went wrong while enabling feature nxapi in switch")
     vrf_resp = ndb_obj.set_nxapi_vrf()
     if vrf_resp:
         logger.info("Kept the nxapi to listen to network namespace")
@@ -647,7 +668,9 @@ def guestshell():
         logger.error("Something went wrong while keeping nxapi to listen to network namespace")
         sys.exit(0)
     start_resp = ndb_obj.start_ndb(ndb_path)
-    if not start_resp:
+    if start_resp:
+        logger.info("Started NDB")
+    else:
         logger.error("Something went wrong while starting NDB as a service")
         sys.exit(0)
 
