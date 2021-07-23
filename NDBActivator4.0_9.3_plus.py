@@ -154,6 +154,16 @@ class Nexus(object):
             logger.error("Something went wrong while enabling feature NX-API")
             return False
 
+    def enable_bash_shell(self):
+        """Enables feature nxapi"""
+        bash_cmd = 'configure terminal ; feature bash-shell'
+        try:
+            cli(bash_cmd)
+            return True
+        except:
+            logger.error("Something went wrong while enabling feature bash-shell")
+            return False
+
     def set_nxapi_vrf(self):
         """Configures vrf to be used for nxapi communication"""
         vrf_cmd = 'configure terminal ; nxapi use-vrf management ; copy running-config startup-config'
@@ -726,6 +736,26 @@ def guestshell():
             if not install_flag:
                 logger.error("To install unzip package, either provide internet connectivity or run activator script with unzip rpm package as argument")
             sys.exit(0)
+    else:
+
+        check_bash = cli("sh running-config | grep bash-shell")
+        if check_bash != "feature bash-shell":
+            bash_resp = ndb_obj.enable_bash_shell()
+            if not bash_resp:
+                logger.error("Something went wrong while enabling feature bash-shell in switch")
+
+
+        cmd0 = "run bash mkdir -p /bootflash/temp_unzip"
+        cli(cmd0)
+        cmd1 = "run bash cp $(which unzip) /bootflash/temp_unzip/unzip"
+        cli(cmd1)
+        cmd2 = "guestshell run sudo cp /bootflash/temp_unzip/unzip /usr/bin"
+        cli(cmd2)
+        perm_cmd = 'guestshell run sudo chmod -Rf 777 /usr/bin/unzip'
+        cli(perm_cmd)
+        cmd3 = "guestshell run sudo rm -rf /bootflash/temp_unzip/"
+        cli(cmd3)
+        logger.debug("Copied the Unzip package into the /usr/bin directory")
 
     # Unzipping NDB zip file to Guestshell bootflash
     extract_resp = ndb_obj.extract_ndb(zip_file_path, '/bootflash')
