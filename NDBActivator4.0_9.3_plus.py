@@ -1,7 +1,11 @@
-"""Validated NDB Release(s): NDB 3.10.0
+"""
+Validated NDB Release(s): NDB 3.10.0, NDB 3.10.1
 Script is to deploy NDB Embedded on the Guestshell for the first time
-usage: python bootflash:<Activator_script> -v guestshell+ <NDB_embedded_zip_file>
-            [<jre_tar.gz_file> <unzip_rpm_file>] [--force] [--quiet]"""
+Usage for NDB 3.10.0:   python bootflash:<Activator_script> -v guestshell+ <NDB_embedded_zip_file>
+                        [<jre_tar.gz_file> <unzip_rpm_file>] [--force] [--quiet]
+Usage for NDB 3.10.1 and above: python bootflash:<Activator_script> -v guestshell+ <NDB_embedded_zip_file>
+                        [--force] [--quiet]
+"""
 
 import json
 import subprocess
@@ -380,21 +384,30 @@ class NDB(Guestshell):
         try:
             ndbpath = path
             files = ('runndb.sh', 'start.sh', 'version.properties', 'runndb.bat')
-            dirs = ('embedded', 'lib', 'bin', 'configuration', 'etc', 'plugins')
             for file_name in files:
                 file_path = ndbpath + '/' + file_name
                 if not os.path.exists(file_path):
+                    logger.debug(file_path)
                     return False
+            fd = os.open(ndbpath + '/version.properties', os.O_RDWR)
+            ndb_ver = os.read(fd, 35)
+            os.close(fd)
+            # logger.info(ndb_ver)
+            if "com.cisco.csdn.ndb.version = 3.10.0" in ndb_ver:
+                dirs = ('embedded', 'lib', 'bin', 'configuration', 'etc', 'plugins')
+            else:
+                dirs = ('embedded', 'lib', 'bin', 'configuration', 'plugins')
             for dir_name in dirs:
                 dir_path = ndbpath + '/' + dir_name
                 if not os.path.isdir(dir_path):
+                    logger.debug(dir_path)
                     return False
             return True
         except:
             return False
 
     def install_jre(self, install_flag, jre_file):
-        """Setting up JRE for NDB"""
+        """Setting up JRE for NDB 3.10.0"""
         if install_flag and "tar.gz" in jre_file:
             logger.info("Extracting JAVA - offline mode")
             install_jre_cmd0 = 'guestshell run sudo mkdir -p /usr/bin/jre'
@@ -403,7 +416,7 @@ class NDB(Guestshell):
             cli(install_jre_cmd1)
             install_jre_cmd2 = 'guestshell run sudo ls /usr/bin/jre/'
             val = cli(install_jre_cmd2)
-            install_jre_cmd = 'guestshell run sudo ln -s /usr/bin/jre/'+val.strip()+'/bin/java /usr/bin/java'
+            install_jre_cmd = 'guestshell run sudo ln -s /usr/bin/jre/' + val.strip() + '/bin/java /usr/bin/java -f'
         else:
             logger.info("Installing JAVA - online mode")
             install_jre_cmd = 'guestshell run sudo ip netns exec management yum -y install java-1.8.0-openjdk'
@@ -463,17 +476,25 @@ def validate_gs_version(version):
     expected_major_version1 = 2
     expected_minor_version1 = 2
     val = str(major_version1) + "." + str(minor_version1)
+    flag = False
     if val == "2.2":
         version2 = list(versions[1])
         major_version2 = version2[0]
         minor_version2 = version2[1]
         expected_major_version2 = 0
         expected_minor_version2 = 2
-        if bool(int(major_version2) >= int(expected_major_version2) and (int(minor_version2)) >= int(
-                expected_minor_version2)) is False:
-            return False
-    return(bool(int(major_version1) >= int(expected_major_version1) and (int(minor_version1)) >= int(
-        expected_minor_version1)))
+        if int(major_version2) > int(expected_major_version2):
+            flag = True
+        elif int(major_version2) == int(expected_major_version2):
+            if int(minor_version2) >= int(expected_minor_version2):
+                flag = True
+    else:
+        if int(major_version1) > int(expected_major_version1):
+            flag = True
+        elif int(major_version1) == int(expected_major_version1):
+            if int(minor_version1) >= int(expected_minor_version1):
+                flag = True
+    return flag
 
 def wait_gs_up(gs_obj):
     """Waits for the guestshell to be UP"""
@@ -581,8 +602,12 @@ def guestshell():
     unzip_file = "online"
     if '--help' in sys.argv:
         logger.info(
-            "usage: python bootflash:<Activator_script> -v guestshell+ <NDB_embedded_zip_file> "
-            "[<jre_tar.gz_file> <unzip_rpm_file>] [--force] [--quiet]")
+            "Supported NDB versions: NDB 3.10.0 and above\n"
+            "Usage for NDB 3.10.0 alone: python bootflash:<Activator_script> -v guestshell+ <NDB_embedded_zip_file> "
+            "[<jre_tar.gz_file> <unzip_rpm_file>] [--force] [--quiet]\n"
+            "Usage for NDB 3.10.1 and above: python bootflash:<Activator_script> -v guestshell+ <NDB_embedded_zip_file>"
+            " [--force] [--quiet]")
+        sys.exit(0)
     if len(sys.argv) == 4:
         zip_file_path = sys.argv[-1]
     elif len(sys.argv) == 5 and '--force' in sys.argv[-1]:
@@ -609,15 +634,29 @@ def guestshell():
     else:
         logger.error("Provided arguments are not valid")
         logger.info(
-            "usage: python bootflash:<Activator_script> -v guestshell+ <NDB_embedded_zip_file> "
-            "[<jre_tar.gz_file> <unzip_rpm_file>] [--force] [--quiet]")
+            "Supported NDB versions: NDB 3.10.0 and above\n"
+            "Usage for NDB 3.10.0 alone: python bootflash:<Activator_script> -v guestshell+ <NDB_embedded_zip_file> "
+            "[<jre_tar.gz_file> <unzip_rpm_file>] [--force] [--quiet]\n"
+            "Usage for NDB 3.10.1 and above: python bootflash:<Activator_script> -v guestshell+ <NDB_embedded_zip_file>"
+            " [--force] [--quiet]")
         sys.exit(0)
-    if install_flag == 1 and "tar.gz" not in jre_file:
-        logger.error("Provided jre tar.gz file is not valid.")
+    if not os.path.exists(zip_file_path):
+        logger.error("NDB zip file does not exists in the given path " + zip_file_path)
         sys.exit(0)
-    if install_flag == 1 and "rpm" not in unzip_file:
-        logger.error("Provided unzip rpm package file is not valid")
-        sys.exit(0)
+    if install_flag == 1 and "ndb1000-sw-app-emb-9.3-plus-k9-3.10.0.zip" in zip_file_path:
+        if "tar.gz" not in jre_file:
+            logger.error("Provided jre file is invalid.")
+            sys.exit(0)
+        elif not os.path.exists(jre_file):
+            logger.error("jre tar.gz file does not exists in the given path "+ jre_file)
+            sys.exit(0)
+    if install_flag == 1 and "ndb1000-sw-app-emb-9.3-plus-k9-3.10.0.zip" in zip_file_path:
+        if "rpm" not in unzip_file:
+            logger.error("Provided unzip package is invalid")
+            sys.exit(0)
+        elif not os.path.exists(unzip_file):
+            logger.error("unzip rpm file does not exists in the given path " + unzip_file)
+            sys.exit(0)
     c_user = ndb_obj.get_user()
     if not c_user:
         logger.error("Something went wrong while fetching current user")
@@ -673,19 +712,20 @@ def guestshell():
         logger.error("Directory ndb already present in bootflash. Please remove it.")
         sys.exit(0)
 
-    # JRE installation
-    jre_resp = ndb_obj.install_jre(install_flag, jre_file)
-    if not jre_resp:
-        if not install_flag:
-            logger.info("To install Java, either provide internet connectivity or run activator script with JRE tar.gz file as argument")
-        sys.exit(0)
-    # unzip package installation
-    unzip_resp = ndb_obj.install_unzip(install_flag, unzip_file)
-    if not unzip_resp:
-        logger.error("Something went wrong while installing unzip package, refer ndb_deploy.log in bootflash for more details")
-        if not install_flag:
-            logger.error("To install unzip package, either provide internet connectivity or run activator script with unzip rpm package as argument")
-        sys.exit(0)
+    if "ndb1000-sw-app-emb-9.3-plus-k9-3.10.0.zip" in zip_file_path:
+        # JRE installation
+        jre_resp = ndb_obj.install_jre(install_flag, jre_file)
+        if not jre_resp:
+            if not install_flag:
+                logger.info("To install Java, either provide internet connectivity or run activator script with JRE tar.gz file as argument")
+            sys.exit(0)
+        # unzip package installation
+        unzip_resp = ndb_obj.install_unzip(install_flag, unzip_file)
+        if not unzip_resp:
+            logger.error("Something went wrong while installing unzip package, refer ndb_deploy.log in bootflash for more details")
+            if not install_flag:
+                logger.error("To install unzip package, either provide internet connectivity or run activator script with unzip rpm package as argument")
+            sys.exit(0)
 
     # Unzipping NDB zip file to Guestshell bootflash
     extract_resp = ndb_obj.extract_ndb(zip_file_path, '/bootflash')

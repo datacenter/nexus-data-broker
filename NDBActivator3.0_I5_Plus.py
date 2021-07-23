@@ -424,17 +424,25 @@ def validate_gs_version(version):
     expected_major_version1 = 2
     expected_minor_version1 = 2
     val = str(major_version1) + "." + str(minor_version1)
+    flag = False
     if val == "2.2":
         version2 = list(versions[1])
         major_version2 = version2[0]
         minor_version2 = version2[1]
         expected_major_version2 = 0
         expected_minor_version2 = 2
-        if bool(int(major_version2) >= int(expected_major_version2) and (int(minor_version2)) >= int(
-                expected_minor_version2)) is False:
-            return False
-    return(bool(int(major_version1) >= int(expected_major_version1) and (int(minor_version1)) >= int(
-        expected_minor_version1)))
+        if int(major_version2) > int(expected_major_version2):
+            flag = True
+        elif int(major_version2) == int(expected_major_version2):
+            if int(minor_version2) >= int(expected_minor_version2):
+                flag = True
+    else:
+        if int(major_version1) > int(expected_major_version1):
+            flag = True
+        elif int(major_version1) == int(expected_major_version1):
+            if int(minor_version1) >= int(expected_minor_version1):
+                flag = True
+    return flag
 
 def wait_gs_up(gs_obj):
     """Waits for the guestshell to be UP"""
@@ -548,6 +556,9 @@ def guestshell():
         zip_file_path = sys.argv[-3]
     else:
         logger.error("Please provide valid arguments")
+        sys.exit(0)
+    if not os.path.exists(zip_file_path):
+        logger.error("NDB zip file does not exists in the given path " + zip_file_path)
         sys.exit(0)
     c_user = ndb_obj.get_user()
     if not c_user:
