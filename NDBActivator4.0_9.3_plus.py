@@ -112,7 +112,7 @@ class Nexus(object):
                 if "privilege level" in line:
                     user_priv = line.split(":")[1]
         except:
-            logger.error("Something went wrong while fetching user privilege")
+            logger.info("Something went wrong while fetching user privilege")
         return user_priv
 
     def get_nxos_version(self):
@@ -682,10 +682,14 @@ def guestshell():
     if 'network-admin' not in c_user_role:
         logger.error("User role is not network-admin")
         sys.exit(0)
-    privilege = ndb_obj.get_privilege()
-    if int(privilege) != 15:
-        logger.error("User privilege is not 15")
-        sys.exit(0)
+    
+    try:
+        privilege = ndb_obj.get_privilege()
+        if int(privilege) != 15:
+            logger.error("User privilege is not 15")
+            sys.exit(0)
+    except:
+        logger.info("Show privilege validation skipped")
     # Check whether the guestshell is activated
     current_gs_status = ndb_obj.get_status()
     if current_gs_status == 'Activated':
