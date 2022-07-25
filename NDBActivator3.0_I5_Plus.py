@@ -81,7 +81,7 @@ class Nexus(object):
         if user:
             self.user = user
         if self.user:
-            roles_cmd = 'show user-account '+ self.user +' | json'
+            roles_cmd = 'show user-account '+ self.user.decode('UTF-8') +' | json'
             try:
                 roles_resp = cli(roles_cmd)
                 roles = json.loads(roles_resp)
@@ -181,15 +181,15 @@ class Nexus(object):
             make_path = embedded_path + '/make-systemctl-env.sh'
             if bool(os.path.exists(make_path)):
                 for line in fileinput.input(make_path, inplace=1):
-                    print line.replace("guestshell", user)
+                    print (line.replace("guestshell", user.decode('UTF-8')))
             service_path = embedded_path + '/ndb.service'
             if bool(os.path.exists(service_path)):
                 for line in fileinput.input(service_path, inplace=1):
-                    print line.replace("guestshell", user)
+                    print (line.replace("guestshell", user.decode('UTF-8')))
             trigger_path = embedded_path + 'trigger.sh'
             if bool(os.path.exists(trigger_path)):
                 for line in fileinput.input(trigger_path, inplace=1):
-                    print line.replace("guestshell", user)
+                    print (line.replace("guestshell", user.decode('UTF-8')))
             return True
         except:
             return False
@@ -449,7 +449,7 @@ def wait_gs_up(gs_obj):
     status_check_count = 36
     check_interval = 5
     activated_flag = 0
-    for _ in xrange(status_check_count):
+    for _ in range(status_check_count):
         gs_status = gs_obj.get_status()
         if gs_status == 'Activated':
             activated_flag = 1
