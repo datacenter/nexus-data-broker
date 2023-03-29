@@ -2,6 +2,8 @@
 # ndb    This used to do various ndb operations.
 # chkconfig: - 99 10
 # description: NDB service script
+#Redhat version verified: Redhat 7.5, 7.7
+#NDB Versions verified : NDB 3.10.1
 
 ### BEGIN INIT INFO
 #Required start
@@ -11,7 +13,6 @@
 ### END INIT INFO
 
 # EDIT THE BELOW LINES -START
-export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre
 NDB_PATH=/home/user/xnc
 # END
 
