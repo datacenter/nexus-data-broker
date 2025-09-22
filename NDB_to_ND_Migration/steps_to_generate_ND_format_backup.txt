@@ -1,0 +1,20 @@
+1)Prerequisites-
+   	a)Tools should be in latest version - tar, gzip, openssl
+	b)3.10.5/4.0.0 backup file should be downloaded in system
+	c)Get the version of ND -
+		i) ssh to ND
+		ii)To get version, run : kubectl get release
+			1) eg : 4.1.0.185.1
+
+2)Execute script
+	a)Set Executable Permission 
+		i)chmod +x backup_converter.sh
+	b)Run the Script
+		i)./backup_converter.sh -f {zip_file} -v {ND_version} -k {password}
+		Parameters:
+			-f: Backup file path (backup.zip)
+			-v: Target ND version (obtained from kubectl get release)
+			-k: Encryption password (optional, defaults to cisco123)
+	
+3)Output
+	Final converted backup file ready for ND restore: cisco-nddb-backup.tar.gz
