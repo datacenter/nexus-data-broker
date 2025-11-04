@@ -96,7 +96,7 @@ echo "Encryption complete. Encrypted file: $ENCRYPTED_FILE"
 # Step 8: Create archive.metadata file
 echo "Creating $ARCHIVE_METADATA..."
 cat <<EOF > "$ARCHIVE_METADATA"
-{"createdBy":"NexusDashboard","version":"$VERSION","type":"configOnly","name":"vi","mode":"LAN","license":{"cisco-nddb":"Base","cisco-ndfc":"Premier","cisco-nir":"Base"}}
+{"createdBy":"NexusDashboard","version":"$VERSION","type":"configOnly","name":"vi","mode":"LAN","license":{"cisco-nddb":"Essentials","cisco-ndfc":"Premier","cisco-nir":"Base"}}
 EOF
 echo "$ARCHIVE_METADATA created."
 
