@@ -34,7 +34,7 @@ META_FILE="meta.yaml"
 FOLDER="cisco-nddb"
 ND_FOLDER="nd"
 ENCRYPTED_FILE="backup.data"
-FINAL_ARCHIVE="cisco-nddb-backup.tar.gz"
+FINAL_ARCHIVE="cisco-nddb-backup.tar"
 ARCHIVE_METADATA="archive.metadata"
 BACKUP_FOLDER="backup"
 ND_TAR_FILE="nd.tar"
@@ -116,7 +116,8 @@ echo "Files moved to $BACKUP_FOLDER."
 # Step 11: Create a compressed archive containing backup.data and archive.metadata
 echo "Creating compressed archive $FINAL_ARCHIVE..."
 #tar -czvf "$FINAL_ARCHIVE" -C "$BACKUP_FOLDER" backup.data archive.metadata
-tar -czvf "$FINAL_ARCHIVE"  "$BACKUP_FOLDER"
+tar --sort=name -cvf "$FINAL_ARCHIVE" "$BACKUP_FOLDER/"
+gzip -n "$FINAL_ARCHIVE"
 echo "Compressed archive $FINAL_ARCHIVE created."
 
 # Step 12: Cleanup temporary files
