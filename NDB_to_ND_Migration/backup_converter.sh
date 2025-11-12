@@ -115,7 +115,6 @@ echo "Files moved to $BACKUP_FOLDER."
 
 # Step 11: Create a compressed archive containing backup.data and archive.metadata
 echo "Creating compressed archive $FINAL_ARCHIVE..."
-#tar -czvf "$FINAL_ARCHIVE" -C "$BACKUP_FOLDER" backup.data archive.metadata
 tar --sort=name -cvf "$FINAL_ARCHIVE" "$BACKUP_FOLDER/"
 gzip -n "$FINAL_ARCHIVE"
 echo "Compressed archive $FINAL_ARCHIVE created."
