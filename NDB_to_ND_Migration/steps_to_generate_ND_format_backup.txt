@@ -1,20 +1,149 @@
-1)Prerequisites-
-   	a)Tools should be in latest version - tar, gzip, openssl
-	b)3.10.5/4.0.0 backup file should be downloaded in system
-	c)Get the version of ND -
-		i) ssh to ND
-		ii)To get version, run : kubectl get release
-			1) eg : 4.1.0.185.1
+================================================================================
+  NDB to Nexus Dashboard (ND) Backup Conversion Guide
+================================================================================
 
-2)Execute script
-	a)Set Executable Permission 
-		i)chmod +x backup_converter.sh
-	b)Run the Script
-		i)./backup_converter.sh -f {zip_file} -v {ND_version} -k {password}
-		Parameters:
-			-f: Backup file path (backup.zip)
-			-v: Target ND version (obtained from kubectl get release)
-			-k: Encryption password (optional, defaults to cisco123)
-	
-3)Output
-	Final converted backup file ready for ND restore: cisco-nddb-backup.tar.gz
+This guide walks you through converting an NDB configuration backup into a
+format that can be restored on Nexus Dashboard. Follow each step carefully.
+
+  TIP: For a quick summary of all script options, run:
+
+        ./backup_converter.sh --help
+
+
+================================================================================
+  IMPORTANT: Supported NDB Versions
+================================================================================
+
+  This migration is supported ONLY for backups taken from NDB version 3.10.4,
+  or 3.10.5
+
+  If your NDB deployment is running an older version (e.g., 3.9.x or earlier),
+  you must first upgrade your NDB to version 3.10.4 or 3.10.5 before taking
+  the backup. Backups from unsupported versions cannot be used for migration.
+
+
+================================================================================
+  Step 1 — Prerequisites
+================================================================================
+
+  1a) Required Tools on the Machine Where You Run the Script
+
+      The following tools must be installed (and up to date) on the Linux
+      machine where you will execute the backup_converter.sh script:
+
+        - tar     (minimum version: 1.34)
+        - gzip    (minimum version: 1.10)
+        - openssl (minimum version: 3.0.2)
+
+      To check your installed versions, run:
+
+        tar --version
+        gzip --version
+        openssl version
+
+
+  1b) Download the Configuration Backup from Your NDB Controller
+
+      You need to download the configuration backup from the NDB controller
+      that is currently running version 3.10.4, 3.10.5.
+
+      To download the backup:
+        1. Log in to the NDB controller web UI as an admin user.
+        2. Navigate to Admin > Download Backup.
+        3. Save the backup .zip file to the Linux machine where you will
+           run the conversion script.
+
+
+  1c) Obtain Your Target Nexus Dashboard Version
+
+      You need the full version string of the Nexus Dashboard where you will
+      restore the converted backup.
+
+      To find the version:
+        1. Log in to the Nexus Dashboard web UI.
+        2. Click the Help icon (?) in the top-right corner.
+        3. Select "About Nexus Dashboard".
+        4. Note down the full version number (e.g., 4.2.0).
+
+
+================================================================================
+  Step 2 — Run the Conversion Script
+================================================================================
+
+  2a) Set Executable Permission (one-time step)
+
+        chmod +x backup_converter.sh
+
+
+  2b) Run the Script
+
+        ./backup_converter.sh -f <backup_file> -v <nd_version> -k <password>
+
+      Parameters:
+
+        -f <backup_file>   Path to the NDB backup .zip file you downloaded
+                           in Step 1b.
+                           Example: ./ndb_backup.zip
+
+        -v <nd_version>    The full Nexus Dashboard version string you noted
+                           in Step 1c.
+                           Example: 4.2.0
+
+        -k <password>      Encryption password used to secure the converted
+                           backup file. This password will be required when
+                           restoring the backup on Nexus Dashboard.
+
+                           If not provided, it defaults to: cisco123
+
+      ┌──────────────────────────────────────────────────────────────────┐
+      │  WARNING: Remember the encryption password!                     │
+      │                                                                 │
+      │  The password you specify with -k is used to encrypt the        │
+      │  converted backup. You MUST provide this same password when     │
+      │  restoring the backup on Nexus Dashboard.                       │
+      │                                                                 │
+      │  If you lose or forget this password, the backup CANNOT be      │
+      │  restored and the migration will fail. You would need to        │
+      │  re-run this conversion process from the beginning.             │
+      │                                                                 │
+      │  Store the password in a safe and accessible location.          │
+      └──────────────────────────────────────────────────────────────────┘
+
+
+  2c) Example
+
+      The following example converts a backup file named ndb_backup.zip for
+      Nexus Dashboard version 4.2.0 with a custom encryption password:
+
+        ./backup_converter.sh -f ./ndb_backup.zip -v 4.2.0 -k MySecurePass123
+
+      Using the default encryption password (cisco123):
+
+        ./backup_converter.sh -f ./ndb_backup.zip -v 4.2.0
+
+
+================================================================================
+  Step 3 — Output
+================================================================================
+
+  Upon successful completion, the script generates the following file in the
+  current directory:
+
+        cisco-nddb-backup.tar.gz
+
+  This is the converted backup file ready to be restored on Nexus Dashboard.
+
+
+================================================================================
+  Summary
+================================================================================
+
+  1. Ensure tar, gzip, and openssl are up to date on your machine.
+  2. Download the backup from NDB 3.10.4 / 3.10.5 controller UI.
+  3. Get the target Nexus Dashboard version from its UI (Help > About).
+  4. Run the conversion script with the backup file, ND version, and a
+     memorable encryption password.
+  5. Restore the output file (cisco-nddb-backup.tar.gz) on Nexus Dashboard
+     using the same encryption password.
+
+================================================================================
