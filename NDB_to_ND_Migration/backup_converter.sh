@@ -1,23 +1,102 @@
 #!/bin/bash
-# filepath: ./converter
+# NDB to Nexus Dashboard Backup Converter
+# Converts an NDB 3.10.4/3.10.5 configuration backup into a format
+# that can be restored on Nexus Dashboard.
 
 # Default values
 BACKUP_ZIP=""
 VERSION=""
 ENCRYPTION_KEY="cisco123"
 
+# Help function
+show_help() {
+    cat <<HELP
+================================================================================
+  NDB to Nexus Dashboard Backup Converter
+================================================================================
+
+  Converts an NDB configuration backup (.zip) into an encrypted backup file
+  (.tar.gz) that can be restored on Nexus Dashboard.
+
+  Supported NDB versions: 3.10.4, 3.10.5
+
+USAGE:
+  $0 -f <backup_file> -v <nd_version> [-k <password>]
+  $0 --help
+
+OPTIONS:
+  -f <backup_file>   (Required) Path to the NDB backup .zip file.
+                     This is the configuration backup downloaded from
+                     your NDB controller (Admin > Download Backup).
+
+  -v <nd_version>    (Required) Target Nexus Dashboard version string.
+                     Obtain this from the Nexus Dashboard UI:
+                       Help (?) > About Nexus Dashboard
+                     Example: 4.2.0
+
+  -k <password>      (Optional) Encryption password for the converted backup.
+                     This password is used to encrypt the output file and
+                     will be required when restoring on Nexus Dashboard.
+                     Default: cisco123
+
+                     WARNING: You MUST remember this password. If you lose
+                     it, the backup cannot be restored and the migration
+                     will fail.
+
+  --help             Display this help message and exit.
+
+EXAMPLES:
+  # With a custom encryption password:
+  $0 -f ./ndb_backup.zip -v 4.2.0 -k MySecurePass123
+
+  # Using the default encryption password (cisco123):
+  $0 -f ./ndb_backup.zip -v 4.2.0
+
+OUTPUT:
+  cisco-nddb-backup.tar.gz  — The converted backup file, created in the
+                               current directory. Upload this file to
+                               Nexus Dashboard to restore.
+
+PREREQUISITES:
+  The following tools must be installed on this machine:
+    - tar      (minimum version: 1.34)
+    - gzip     (minimum version: 1.10)
+    - openssl  (minimum version: 3.0.2)
+
+================================================================================
+HELP
+    exit 0
+}
+
+# Check for --help before getopts (getopts doesn't handle long options)
+for arg in "$@"; do
+    if [[ "$arg" == "--help" || "$arg" == "-h" ]]; then
+        show_help
+    fi
+done
+
+# Show help if no arguments provided
+if [[ $# -eq 0 ]]; then
+    show_help
+fi
+
 # Parse CLI options
-while getopts "f:v:k:" opt; do
+while getopts "f:v:k:h" opt; do
   case $opt in
     f) BACKUP_ZIP="$OPTARG" ;;
     v) VERSION="$OPTARG" ;;
     k) ENCRYPTION_KEY="$OPTARG" ;;
-    *) echo "Usage: $0 -f <backup.zip> -v <version> [-k <encryption_key>]"; exit 1 ;;
+    h) show_help ;;
+    *) echo "Usage: $0 -f <backup.zip> -v <version> [-k <encryption_key>]"
+       echo "Run '$0 --help' for more information."
+       exit 1 ;;
   esac
 done
 
 if [ -z "$BACKUP_ZIP" ] || [ -z "$VERSION" ]; then
+    echo "Error: Missing required parameters."
     echo "Usage: $0 -f <backup.zip> -v <version> [-k <encryption_key>]"
+    echo "Run '$0 --help' for more information."
     exit 1
 fi
 
