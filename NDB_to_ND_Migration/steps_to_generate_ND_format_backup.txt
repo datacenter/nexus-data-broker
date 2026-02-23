@@ -14,7 +14,7 @@ format that can be restored on Nexus Dashboard. Follow each step carefully.
   IMPORTANT: Supported NDB Versions
 ================================================================================
 
-  This migration is supported ONLY for backups taken from NDB version 3.10.4,
+  This migration is supported ONLY for backups taken from NDB version 3.10.4
   or 3.10.5
 
   If your NDB deployment is running an older version (e.g., 3.9.x or earlier),
